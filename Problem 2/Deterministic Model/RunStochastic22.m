@@ -49,11 +49,14 @@ N = length(t);
 % Initial states: empty tanks
 x0 = [0;0;0;0];
 
-% Manipulated variables
-F1 = 250;
-F2 = 325;
+%% ---------------------------------------------------------
+% Nominal manipulated variables
+% ---------------------------------------------------------
 
-u = [F1;F2];
+F1_nom = 300;   % Pump 1 [cm^3/s]
+F2_nom = 300;   % Pump 2 [cm^3/s]
+
+u = [F1_nom;F2_nom];
 
 %% ---------------------------------------------------------
 % Stochastic disturbance parameters
@@ -62,20 +65,20 @@ u = [F1;F2];
 % Mean disturbance flows [cm^3/s]
 d_mean = [20;20];
 
-% Standard deviation [cm^3/s]
+% Standard deviations [cm^3/s]
 d_std = [5;5];
 
-% Covariance matrix
+% Disturbance covariance matrix
 Qd = diag(d_std.^2);
 
 %% ---------------------------------------------------------
 % Measurement noise parameters
 % ---------------------------------------------------------
 
-% Sensor standard deviation [cm]
+% Sensor standard deviations [cm]
 sigma_y = [0.1;0.1];
 
-% Measurement covariance matrix
+% Measurement noise covariance matrix
 Rvv = diag(sigma_y.^2);
 
 %% ---------------------------------------------------------
@@ -92,39 +95,39 @@ X(1,:) = x0';
 % Stochastic nonlinear simulation
 % ---------------------------------------------------------
 
-% Number of sampling steps per disturbance interval
+% Sampling steps per disturbance interval
 stepsPerInterval = round(Td/Ts);
 
-% Check that intervals match
+% Verify interval compatibility
 assert(abs(stepsPerInterval*Ts-Td)<1e-10, ...
     'Td must be a multiple of Ts');
 
-nIntervals = (N-1)/stepsPerInterval;
-
 assert(mod(N-1,stepsPerInterval)==0, ...
     'Simulation time must contain complete intervals');
+
+nIntervals = (N-1)/stepsPerInterval;
 
 for k = 1:nIntervals
 
     % Generate random disturbance values
     dk = d_mean + d_std.*randn(2,1);
 
-    % Physical constraint: no negative inflows
+    % Prevent negative inlet flows
     dk = max(dk,0);
 
-    % Define time indices
+    % Time indices for the current interval
     i0 = (k-1)*stepsPerInterval + 1;
     i1 = k*stepsPerInterval + 1;
 
-    % Solve ODE with constant disturbance
+    % Solve the nonlinear ODE with constant disturbance
     [~,Xseg] = ode15s( ...
         @(tt,xx) FourTankSystem(tt,xx,u,dk,p), ...
         t(i0:i1),X(i0,:)');
 
-    % Store states
+    % Store simulated states
     X(i0:i1,:) = Xseg;
 
-    % Store disturbance values
+    % Store piecewise-constant disturbances
     D(i0:i1-1,:) = repmat( ...
         dk',stepsPerInterval,1);
 
@@ -150,8 +153,10 @@ Z = H(:,1:2);
 % y = z + v
 % ---------------------------------------------------------
 
+% Generate Gaussian sensor noise
 V = randn(N,2)*diag(sigma_y);
 
+% Noisy measurements
 Y = Z + V;
 
 %% ---------------------------------------------------------
@@ -183,7 +188,7 @@ end
 sgtitle('Stochastic Nonlinear Model - Tank Masses')
 
 %% ---------------------------------------------------------
-% Plot 2 - Disturbances
+% Plot 2 - Stochastic disturbances
 % ---------------------------------------------------------
 
 figure;
@@ -265,3 +270,26 @@ for j = 1:4
 end
 
 sgtitle('Stochastic Nonlinear Model - Tank Levels')
+
+%% ---------------------------------------------------------
+% Display simulation information
+% ---------------------------------------------------------
+
+disp('---------------------------------------')
+disp('Problem 2.2 - Stochastic Nonlinear Model')
+disp('---------------------------------------')
+
+fprintf('Nominal F1 = %.1f cm^3/s\n',F1_nom)
+fprintf('Nominal F2 = %.1f cm^3/s\n',F2_nom)
+
+fprintf('Mean F3 = %.1f cm^3/s\n',d_mean(1))
+fprintf('Mean F4 = %.1f cm^3/s\n',d_mean(2))
+
+fprintf('Disturbance interval = %.1f s\n',Td)
+fprintf('Sampling time = %.1f s\n',Ts)
+
+disp('Disturbance covariance matrix Qd:')
+disp(Qd)
+
+disp('Measurement covariance matrix Rvv:')
+disp(Rvv)
