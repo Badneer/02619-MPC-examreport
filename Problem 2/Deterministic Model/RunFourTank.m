@@ -29,7 +29,17 @@ p = [a1;a2;a3;a4; A1;A2;A3;A4; ...
 d1 = 0;       % F3 [cm^3/s]
 d2 = 0;       % F4 [cm^3/s]
 
-d = [d1; d2];
+d = [d1;d2];
+
+%% ---------------------------------------------------------
+% Nominal operating conditions
+% ---------------------------------------------------------
+
+F1_nom = 300;    % [cm^3/s]
+F2_nom = 300;    % [cm^3/s]
+
+us = [F1_nom;F2_nom];
+ds = d;
 
 %% ---------------------------------------------------------
 % Simulation scenario
@@ -38,10 +48,7 @@ d = [d1; d2];
 t0 = 0;
 tf = 20*60;
 
-x0 = [0; 0; 0; 0];
-
-F1_nom = 250;
-F2 = 325;
+x0 = [0;0;0;0];
 
 % Different F1 step sizes
 step_percent = [0 5 10 25];
@@ -53,7 +60,7 @@ for k = 1:length(step_percent)
 
     F1 = F1_nom*(1 + step_percent(k)/100);
 
-    u = [F1; F2];
+    u = [F1;F2_nom];
 
     % Simulate with disturbances
     [T_all{k},X_all{k}] = ode15s( ...
@@ -65,10 +72,8 @@ end
 % Compute nominal solution
 % ---------------------------------------------------------
 
-u = [F1_nom; F2];
-
 [T,X] = ode15s(@FourTankSystem, ...
-               [t0 tf],x0,[],u,d,p);
+               [t0 tf],x0,[],us,ds,p);
 
 [nT,nX] = size(X);
 
@@ -163,18 +168,13 @@ end
 % Linearization at steady state
 % ---------------------------------------------------------
 
-F1s = 250;
-F2s = 325;
+F1s = F1_nom;
+F2s = F2_nom;
 
-us = [F1s; F2s];
+d1s = ds(1);
+d2s = ds(2);
 
-% Steady-state disturbances
-d1s = d1;
-d2s = d2;
-
-ds = [d1s; d2s];
-
-%% 1. Steady-state flows
+%% 1. Calculate steady-state flows
 
 q3s = (1-gamma2)*F2s + d1s;
 q4s = (1-gamma1)*F1s + d2s;
@@ -182,16 +182,16 @@ q4s = (1-gamma1)*F1s + d2s;
 q1s = gamma1*F1s + q3s;
 q2s = gamma2*F2s + q4s;
 
-qs = [q1s; q2s; q3s; q4s];
+qs = [q1s;q2s;q3s;q4s];
 
-%% 2. Steady-state levels
+%% 2. Calculate steady-state levels
 
-a = [a1; a2; a3; a4];
-A_tank = [A1; A2; A3; A4];
+a = [a1;a2;a3;a4];
+A_tank = [A1;A2;A3;A4];
 
 hs = (qs./a).^2/(2*g);
 
-%% 3. Steady-state masses
+%% 3. Calculate steady-state masses
 
 xs = rho*A_tank.*hs;
 
@@ -264,7 +264,6 @@ disp(D_lin)
 % Continuous-time state-space model
 % ---------------------------------------------------------
 
-% Model from manipulated variables to outputs
 sys_c = ss(A_lin,B_lin,C_lin,D_lin);
 
 disp('Continuous-time state-space system:')
@@ -299,11 +298,7 @@ disp(Dd)
 % Compare linear and nonlinear step responses
 % ---------------------------------------------------------
 
-tf = 20*60;
 t = (0:Ts:tf)';
-
-F1s = 250;
-F2s = 325;
 
 stepPercent = [5 10 25];
 
@@ -313,7 +308,7 @@ for j = 1:length(stepPercent)
 
     %% Step change in F1
 
-    dF1 = F1s*stepPercent(j)/100;
+    dF1 = F1_nom*stepPercent(j)/100;
 
     du = [dF1*ones(length(t),1), ...
           zeros(length(t),1)];
@@ -324,15 +319,15 @@ for j = 1:length(stepPercent)
 
     dy_lin = lsim(sys_d,du,t,dx0);
 
-    hs_out = [hs(1);hs(2)];
+    hs_out = hs(1:2);
 
     y_lin = dy_lin + hs_out';
 
     %% Nonlinear model
 
-    F1_step = F1s + dF1;
+    F1_step = F1_nom + dF1;
 
-    u_nl = [F1_step;F2s];
+    u_nl = [F1_step;F2_nom];
 
     [Tnl,Xnl] = ode15s(@FourTankSystem, ...
                        [0 tf],xs,[],u_nl,ds,p);
@@ -374,4 +369,3 @@ for j = 1:length(stepPercent)
     grid on
 
 end
-
