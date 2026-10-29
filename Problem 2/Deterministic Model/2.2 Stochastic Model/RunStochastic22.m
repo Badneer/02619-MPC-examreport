@@ -1,4 +1,11 @@
 
+%% Add Common folder to MATLAB path
+
+scriptFolder = fileparts(mfilename('fullpath'));
+parentFolder = fileparts(scriptFolder);
+
+addpath(fullfile(parentFolder,'Common'));
+
 %% ---------------------------------------------------------
 % Problem 2.2 - Stochastic Nonlinear Model
 % Modified Four Tank System

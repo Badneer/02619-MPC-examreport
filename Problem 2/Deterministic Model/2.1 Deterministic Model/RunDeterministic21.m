@@ -1,4 +1,11 @@
 
+%% Add Common folder to MATLAB path
+
+scriptFolder = fileparts(mfilename('fullpath'));
+parentFolder = fileparts(scriptFolder);
+
+addpath(fullfile(parentFolder,'Common'));
+
 %% ---------------------------------------------------------
 % Parameters
 % ---------------------------------------------------------
