@@ -1,14 +1,11 @@
 
-%% Add Common folder to MATLAB path
-
-scriptFolder = fileparts(mfilename('fullpath'));
-parentFolder = fileparts(scriptFolder);
-
-addpath(fullfile(parentFolder,'Common'));
-
 %% ---------------------------------------------------------
 % Problem 2.2 - Stochastic Nonlinear Model
-% Modified Four Tank System
+% Modified Four-Tank System
+%
+% Dynamics:     dx/dt = f(t,x,u,d,p)
+% Measurements: y = g(x,p) + v
+% Outputs:      z = h(x,p)
 % ---------------------------------------------------------
 
 clear; clc; close all;
@@ -16,7 +13,16 @@ clear; clc; close all;
 rng(1);  % Reproducible random numbers
 
 %% ---------------------------------------------------------
-% Parameters (same as Problem 2.1)
+% Add Common folder to MATLAB path
+% ---------------------------------------------------------
+
+scriptFolder = fileparts(mfilename('fullpath'));
+parentFolder = fileparts(scriptFolder);
+
+addpath(fullfile(parentFolder,'Common'));
+
+%% ---------------------------------------------------------
+% Physical parameters (same as Problem 2.1)
 % ---------------------------------------------------------
 
 a1 = 1.2272;
@@ -47,13 +53,13 @@ A = [A1;A2;A3;A4];
 t0 = 0;
 tf = 20*60;
 
-Ts = 4;    % Sampling time [s]
+Ts = 4;    % Measurement sampling time [s]
 Td = 20;   % Disturbance update interval [s]
 
 t = (t0:Ts:tf)';
 N = length(t);
 
-% Initial states: empty tanks
+% Initial conditions: empty tanks
 x0 = [0;0;0;0];
 
 %% ---------------------------------------------------------
@@ -102,7 +108,7 @@ X(1,:) = x0';
 % Stochastic nonlinear simulation
 % ---------------------------------------------------------
 
-% Sampling steps per disturbance interval
+% Number of sampling steps per disturbance interval
 stepsPerInterval = round(Td/Ts);
 
 % Verify interval compatibility
@@ -116,22 +122,22 @@ nIntervals = (N-1)/stepsPerInterval;
 
 for k = 1:nIntervals
 
-    % Generate random disturbance values
+    % Random disturbance values
     dk = d_mean + d_std.*randn(2,1);
 
-    % Prevent negative inlet flows
+    % Prevent negative disturbance inlet flows
     dk = max(dk,0);
 
-    % Time indices for the current interval
+    % Time indices for current disturbance interval
     i0 = (k-1)*stepsPerInterval + 1;
     i1 = k*stepsPerInterval + 1;
 
-    % Solve the nonlinear ODE with constant disturbance
+    % Solve nonlinear dynamics with constant disturbance
     [~,Xseg] = ode15s( ...
         @(tt,xx) FourTankSystem(tt,xx,u,dk,p), ...
         t(i0:i1),X(i0,:)');
 
-    % Store simulated states
+    % Store simulated tank masses
     X(i0:i1,:) = Xseg;
 
     % Store piecewise-constant disturbances
@@ -143,28 +149,41 @@ end
 D(end,:) = D(end-1,:);
 
 %% ---------------------------------------------------------
-% Calculate tank levels
+% Calculate all four tank levels
 % ---------------------------------------------------------
 
 H = X./(rho*A');
 
 %% ---------------------------------------------------------
-% Output model
-% z = [h1;h2]
+% Controlled output and measurement models
+%
+% z(t_k) = h(x(t_k),p)
+% y(t_k) = g(x(t_k),p) + v_k
 % ---------------------------------------------------------
 
-Z = H(:,1:2);
+Z = zeros(N,2);
+Y = zeros(N,2);
 
-%% ---------------------------------------------------------
-% Measurement model
-% y = z + v
-% ---------------------------------------------------------
+% Generate Gaussian measurement noise
+Lv = chol(Rvv,'lower');
 
-% Generate Gaussian sensor noise
-V = randn(N,2)*diag(sigma_y);
+V = randn(N,2)*Lv';
 
-% Noisy measurements
-Y = Z + V;
+for k = 1:N
+
+    % Physical state vector [m1;m2;m3;m4]
+    xk = X(k,:)';
+
+    % Controlled outputs (true levels)
+    Z(k,:) = FourTankOutput(xk,p)';
+
+    % Noise-free sensor measurements
+    gk = FourTankSensor(xk,p);
+
+    % Add Gaussian measurement noise
+    Y(k,:) = gk' + V(k,:);
+
+end
 
 %% ---------------------------------------------------------
 % Plot 1 - Tank masses
@@ -220,6 +239,8 @@ title('Stochastic Disturbance F4')
 xlim([0 tf/60])
 grid on
 
+sgtitle('Piecewise-Constant Stochastic Disturbances')
+
 %% ---------------------------------------------------------
 % Plot 3 - True levels vs noisy measurements
 % ---------------------------------------------------------
@@ -230,12 +251,16 @@ subplot(2,1,1)
 
 plot(t/60,Z(:,1),'b','LineWidth',1.5)
 hold on
+
 plot(t/60,Y(:,1),'r.','MarkerSize',5)
 
 xlabel('Time [min]')
 ylabel('h_1 [cm]')
 title('Tank 1 - True Level vs Measurement')
-legend('True level','Noisy measurement')
+
+legend('True level','Noisy measurement', ...
+    'Location','best')
+
 xlim([0 tf/60])
 grid on
 
@@ -243,14 +268,20 @@ subplot(2,1,2)
 
 plot(t/60,Z(:,2),'b','LineWidth',1.5)
 hold on
+
 plot(t/60,Y(:,2),'r.','MarkerSize',5)
 
 xlabel('Time [min]')
 ylabel('h_2 [cm]')
 title('Tank 2 - True Level vs Measurement')
-legend('True level','Noisy measurement')
+
+legend('True level','Noisy measurement', ...
+    'Location','best')
+
 xlim([0 tf/60])
 grid on
+
+sgtitle('Controlled Outputs and Measurements')
 
 %% ---------------------------------------------------------
 % Plot 4 - All tank levels

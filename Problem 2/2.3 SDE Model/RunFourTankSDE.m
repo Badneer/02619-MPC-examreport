@@ -4,16 +4,22 @@
 % Modified Four-Tank System
 % Ornstein-Uhlenbeck disturbance model
 % Euler-Maruyama numerical method
+%
+% System:       dx = f(x,u,p)dt + sigma*dW
+% Measurements: y = g(x,p) + v
+% Outputs:      z = h(x,p)
 % ---------------------------------------------------------
 
 clear; clc; close all;
 
-%% Add Common folder to path
+%% ---------------------------------------------------------
+% Add Common folder to MATLAB path
+% ---------------------------------------------------------
 
 scriptFolder = fileparts(mfilename('fullpath'));
-problem2Folder = fileparts(scriptFolder);
+parentFolder = fileparts(scriptFolder);
 
-addpath(fullfile(problem2Folder,'Common'));
+addpath(fullfile(parentFolder,'Common'));
 
 %% ---------------------------------------------------------
 % Physical parameters
@@ -30,7 +36,7 @@ rho = 1.00;
 p = [a;A;gamma;g;rho];
 
 %% ---------------------------------------------------------
-% Manipulated variables
+% Nominal manipulated variables
 % ---------------------------------------------------------
 
 F1 = 300;
@@ -48,7 +54,7 @@ dbar = [20;20];
 % Mean-reversion rates [1/s]
 ad = [1/60;1/60];
 
-% Desired stationary standard deviations [cm^3/s]
+% Stationary standard deviations [cm^3/s]
 stdF = [5;5];
 
 % Diffusion coefficients
@@ -75,8 +81,7 @@ assert(abs(Ts/dt-round(Ts/dt))<1e-10, ...
     'Ts must be a multiple of dt');
 
 %% ---------------------------------------------------------
-% Initial conditions
-% Nominal steady state
+% Initial conditions - Nominal steady state
 % ---------------------------------------------------------
 
 q3s = (1-gamma(2))*F2 + dbar(1);
@@ -91,7 +96,8 @@ hs = (qs./a).^2/(2*g);
 
 m0 = rho*A.*hs;
 
-% Augmented initial state: 4 masses + 2 flows
+% Augmented state:
+% [m1;m2;m3;m4;F3;F4]
 x0 = [m0;dbar];
 
 %% ---------------------------------------------------------
@@ -139,7 +145,7 @@ if any(disturbances(:)<0)
 end
 
 %% ---------------------------------------------------------
-% Calculate physical tank levels
+% Calculate all four tank levels
 % ---------------------------------------------------------
 
 H = zeros(4,N+1,Ns);
@@ -151,7 +157,10 @@ for i = 1:Ns
 end
 
 %% ---------------------------------------------------------
-% Measurement and output models
+% Measurement and controlled output models
+%
+% z(t_k) = h(x(t_k),p)
+% y(t_k) = g(x(t_k),p) + v_k
 % ---------------------------------------------------------
 
 % Measurement covariance
@@ -174,37 +183,38 @@ for i = 1:Ns
 
         idx = sampleIndex(k);
 
-        % Only four physical mass states
+        % Physical tank masses only
         xphysical = X(1:4,idx,i);
 
-% Calculate true liquid levels of Tanks 1 and 2
-zk = xphysical(1:2)./(rho*A(1:2));
+        % True controlled outputs
+        Z(:,k,i) = FourTankOutput(xphysical,p);
 
-% True controlled outputs
-Z(:,k,i) = zk;
+        % Ideal sensor measurements
+        gk = FourTankSensor(xphysical,p);
 
-% Gaussian measurement noise
-vk = Lv*randn(2,1);
+        % Gaussian measurement noise
+        vk = Lv*randn(2,1);
 
-% Noisy sensor measurements
-Y(:,k,i) = zk + vk;
-
+        % Noisy measurements
+        Y(:,k,i) = gk + vk;
 
     end
 
 end
 
 %% ---------------------------------------------------------
+% Legend labels for stochastic realizations
+% ---------------------------------------------------------
+
+realization_labels = arrayfun( ...
+    @(i) sprintf('Realization %d',i), ...
+    1:Ns,'UniformOutput',false);
 
 %% ---------------------------------------------------------
 % Figure 1 - Stochastic disturbance flows
 % ---------------------------------------------------------
 
 figure;
-
-realization_labels = arrayfun( ...
-    @(i) sprintf('Realization %d',i), ...
-    1:Ns,'UniformOutput',false);
 
 for j = 1:2
 
@@ -220,7 +230,6 @@ for j = 1:2
 
     end
 
-    % Mean disturbance flow
     yline(dbar(j),'k--', ...
         'LineWidth',1.5, ...
         'DisplayName','Mean flow');
@@ -237,8 +246,6 @@ for j = 1:2
 end
 
 sgtitle('Ornstein-Uhlenbeck Disturbances')
-
-
 
 %% ---------------------------------------------------------
 % Figure 2 - Tank masses
@@ -277,7 +284,6 @@ end
 
 sgtitle('Stochastic Tank Masses')
 
-
 %% ---------------------------------------------------------
 % Figure 3 - Tank levels
 % ---------------------------------------------------------
@@ -300,7 +306,6 @@ for j = 1:4
 
     end
 
-    % Nominal steady-state level
     yline(hs(tank),'k--', ...
         'LineWidth',1.5, ...
         'DisplayName','Nominal steady state');
@@ -318,10 +323,9 @@ end
 
 sgtitle('Stochastic Tank Levels')
 
-
 %% ---------------------------------------------------------
-% Figure 4 - Measurements
-% First realization
+% Figure 4 - True outputs vs noisy measurements
+% First stochastic realization
 % ---------------------------------------------------------
 
 figure;
@@ -352,7 +356,7 @@ end
 sgtitle('Controlled Outputs and Measurements')
 
 %% ---------------------------------------------------------
-% Display results
+% Display simulation information
 % ---------------------------------------------------------
 
 disp('-----------------------------------------')

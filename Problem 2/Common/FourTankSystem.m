@@ -1,41 +1,62 @@
 
 function xdot = FourTankSystem(t,x,u,d,p)
 % FOURTANKSYSTEM
-% Model dx/dt = f(t,x,u,d,p) for Modified Four Tank System
+% Nonlinear dynamics of the Modified Four-Tank System
 %
-% States:       x = [m1; m2; m3; m4]
-% MVs:          u = [F1; F2]
-% Disturbances: d = [d1; d2] = [F3; F4]
+% dx/dt = f(t,x,u,d,p)
+%
+% States:
+% x = [m1; m2; m3; m4]           [g]
+%
+% Manipulated inputs:
+% u = [F1; F2]                   [cm^3/s]
+%
+% Disturbances:
+% d = [F3; F4]                   [cm^3/s]
+%
+% Parameters:
+% p = [a(1:4); A(1:4); gamma(1:2); g; rho]
 
-% Unpack states, MVs, disturbances, and parameters
-m = x;
-F = u;
+%% Unpack parameters
 
-d1 = d(1);
-d2 = d(2);
+a = p(1:4);
+A = p(5:8);
+gamma = p(9:10);
+g = p(11);
+rho = p(12);
 
-a = p(1:4,1);
-A = p(5:8,1);
-gamma = p(9:10,1);
-g = p(11,1);
-rho = p(12,1);
+%% Manipulated inputs and disturbances
 
-% Inflows
-qin = zeros(4,1);
-qin(1,1) = gamma(1)*F(1);
-qin(2,1) = gamma(2)*F(2);
-qin(3,1) = (1-gamma(2))*F(2) + d1;
-qin(4,1) = (1-gamma(1))*F(1) + d2;
+F1 = u(1);
+F2 = u(2);
 
-% Outflows
-h = m./(rho*A);
+F3 = d(1);
+F4 = d(2);
+
+%% Calculate liquid levels
+
+h = x./(rho*A);
+
+%% Outlet flows (Torricelli's law)
+
 qout = a.*sqrt(2*g*h);
 
-% Differential equations
+%% Inlet flows
+
+qin = [
+    gamma(1)*F1;
+    gamma(2)*F2;
+    (1-gamma(2))*F2 + F3;
+    (1-gamma(1))*F1 + F4
+];
+
+%% Mass balances
+
 xdot = zeros(4,1);
-xdot(1,1) = rho*(qin(1,1)+qout(3,1)-qout(1,1));
-xdot(2,1) = rho*(qin(2,1)+qout(4,1)-qout(2,1));
-xdot(3,1) = rho*(qin(3,1)-qout(3,1));
-xdot(4,1) = rho*(qin(4,1)-qout(4,1));
+
+xdot(1) = rho*(qin(1) + qout(3) - qout(1));
+xdot(2) = rho*(qin(2) + qout(4) - qout(2));
+xdot(3) = rho*(qin(3) - qout(3));
+xdot(4) = rho*(qin(4) - qout(4));
 
 end

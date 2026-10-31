@@ -1,4 +1,11 @@
 
+%% ---------------------------------------------------------
+% Problem 2.1 - Deterministic Model
+% Modified Four-Tank System
+% ---------------------------------------------------------
+
+clear; clc; close all;
+
 %% Add Common folder to MATLAB path
 
 scriptFolder = fileparts(mfilename('fullpath'));
@@ -69,7 +76,6 @@ for k = 1:length(step_percent)
 
     u = [F1;F2_nom];
 
-    % Simulate with disturbances
     [T_all{k},X_all{k}] = ode15s( ...
         @FourTankSystem,[t0 tf],x0,[],u,d,p);
 
@@ -87,14 +93,14 @@ end
 a = p(1:4,1)';
 A = p(5:8,1)';
 
-% Compute liquid levels
+% Compute all four liquid levels
 H = zeros(nT,nX);
 
 for i = 1:nT
     H(i,:) = X(i,:)./(rho*A);
 end
 
-% Compute outflows
+% Compute outlet flows
 Qout = zeros(nT,nX);
 
 for i = 1:nT
@@ -105,11 +111,21 @@ end
 % Measurement and controlled output models
 % ---------------------------------------------------------
 
-% Measured variables: h1 and h2
-Y = H(:,1:2);
+% y = g(x,p)
+% z = h(x,p)
 
-% Controlled outputs: h1 and h2
-Z = Y;
+Y = zeros(nT,2);
+Z = zeros(nT,2);
+
+for i = 1:nT
+
+    % Noise-free measurements
+    Y(i,:) = FourTankSensor(X(i,:)',p)';
+
+    % Controlled outputs
+    Z(i,:) = FourTankOutput(X(i,:)',p)';
+
+end
 
 %% ---------------------------------------------------------
 % Plot tank masses
@@ -136,6 +152,8 @@ for j = 1:4
     grid on
 
 end
+
+sgtitle('Deterministic Tank Masses')
 
 %% ---------------------------------------------------------
 % Compare different F1 step sizes
@@ -170,6 +188,8 @@ for j = 1:4
     hold off
 
 end
+
+sgtitle('Deterministic Response to F1 Changes')
 
 %% ---------------------------------------------------------
 % Linearization at steady state
@@ -309,7 +329,7 @@ t = (0:Ts:tf)';
 
 stepPercent = [5 10 25];
 
-figure
+figure;
 
 for j = 1:length(stepPercent)
 
@@ -326,7 +346,7 @@ for j = 1:length(stepPercent)
 
     dy_lin = lsim(sys_d,du,t,dx0);
 
-    hs_out = hs(1:2);
+    hs_out = FourTankOutput(xs,p);
 
     y_lin = dy_lin + hs_out';
 
@@ -339,7 +359,14 @@ for j = 1:length(stepPercent)
     [Tnl,Xnl] = ode15s(@FourTankSystem, ...
                        [0 tf],xs,[],u_nl,ds,p);
 
-    Hnl = Xnl./(rho*A_tank');
+    % Calculate nonlinear controlled outputs
+    Znl = zeros(length(Tnl),2);
+
+    for i = 1:length(Tnl)
+
+        Znl(i,:) = FourTankOutput(Xnl(i,:)',p)';
+
+    end
 
     %% Plot Tank 1
 
@@ -348,7 +375,7 @@ for j = 1:length(stepPercent)
     plot(t/60,y_lin(:,1),'--','LineWidth',1.5)
     hold on
 
-    plot(Tnl/60,Hnl(:,1),'-','LineWidth',1.5)
+    plot(Tnl/60,Znl(:,1),'-','LineWidth',1.5)
 
     xlabel('Time [min]')
     ylabel('h_1 [cm]')
@@ -365,7 +392,7 @@ for j = 1:length(stepPercent)
     plot(t/60,y_lin(:,2),'--','LineWidth',1.5)
     hold on
 
-    plot(Tnl/60,Hnl(:,2),'-','LineWidth',1.5)
+    plot(Tnl/60,Znl(:,2),'-','LineWidth',1.5)
 
     xlabel('Time [min]')
     ylabel('h_2 [cm]')
@@ -376,3 +403,5 @@ for j = 1:length(stepPercent)
     grid on
 
 end
+
+sgtitle('Linear vs Nonlinear Step Responses')
