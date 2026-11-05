@@ -6,6 +6,8 @@
 % Input-output pairing:
 % F1 -> h1
 % F2 -> h2
+% Both direct gains are positive. With gamma1 + gamma2 > 1,
+% the steady-state gain determinant is positive, supporting this pairing.
 %
 % Experiments:
 % 1. Initial-condition recovery
@@ -23,7 +25,7 @@ clear; clc; close all;
 scriptFolder = fileparts(mfilename('fullpath'));
 parentFolder = fileparts(scriptFolder);
 
-addpath(fullfile(parentFolder,'Common'));
+addpath(fullfile(fileparts(parentFolder),'Problem 2','Common'));
 
 
 %% ---------------------------------------------------------
@@ -113,9 +115,6 @@ Ti = [300;300];
 
 % Derivative times [s]
 Td = [15;15];
-
-% Derivative filter time constants
-Tf = Td/10;
 
 % Anti-windup tracking time constants
 Tt = Ti/2;
@@ -223,8 +222,8 @@ for expID = 1:nExperiments
         % Integral controller state
         I = zeros(2,1);
 
-        % Filtered measured-level derivative
-        dyFiltered = zeros(2,1);
+        % Measured-level derivative (unfiltered)
+        dyMeasured = zeros(2,1);
 
         % Previous sensor measurements
         yPrevious = FourTankSensor(x,p) + V(1,:)';
@@ -248,13 +247,13 @@ for expID = 1:nExperiments
             ek = rk-yk;
 
             %% ---------------------------------------------
-            % Filtered derivative of measurement
+            % Derivative of measurement (unfiltered)
             % ----------------------------------------------
-if k > 1
-    dyFiltered = (yk-yPrevious)/Ts;
-else
-    dyFiltered = zeros(2,1);
-end
+            if k > 1
+                dyMeasured = (yk-yPrevious)/Ts;
+            else
+                dyMeasured = zeros(2,1);
+            end
 
             %% ---------------------------------------------
             % Controller action
@@ -282,7 +281,7 @@ end
                     Iterm = I;
 
                     % Derivative on measurement
-                    Dterm = -Kp.*Td.*dyFiltered;
+                    Dterm = -Kp.*Td.*dyMeasured;
 
             end
 
