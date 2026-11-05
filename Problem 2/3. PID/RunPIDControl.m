@@ -80,13 +80,6 @@ G0 = [
     q2s*gamma(2)/(a(2)^2*g)
 ];
 
-RGA = G0.*inv(G0)';
-
-disp('Steady-state gain matrix:')
-disp(G0)
-
-disp('Relative Gain Array:')
-disp(RGA)
 
 %% ---------------------------------------------------------
 % Simulation settings
