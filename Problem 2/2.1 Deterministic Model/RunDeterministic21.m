@@ -233,10 +233,10 @@ disp(xs/1000)
 % ---------------------------------------------------------
 
 % Linearization constants
-k1 = a1*g/(A1*q1s);
-k2 = a2*g/(A2*q2s);
-k3 = a3*g/(A3*q3s);
-k4 = a4*g/(A4*q4s);
+k1 = a1^2*g/(A1*q1s);
+k2 = a2^2*g/(A2*q2s);
+k3 = a3^2*g/(A3*q3s);
+k4 = a4^2*g/(A4*q4s);
 
 %% A matrix
 
