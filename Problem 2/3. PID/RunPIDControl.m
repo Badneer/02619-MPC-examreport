@@ -69,7 +69,7 @@ xs = rho*A.*hs;
 zs = FourTankOutput(xs,p);
 
 %% ---------------------------------------------------------
-% Steady-state gain matrix and RGA
+% Steady-state gain matrix
 % ---------------------------------------------------------
 
 G0 = [
