@@ -9,7 +9,7 @@
 % 2.3 Ornstein-Uhlenbeck SDE model
 %
 % Dynamics:     dx/dt = f(t,x,u,d,p)
-% Measurements: y = g(x,p) + v
+% Measurements: deterministic y = g(x,p); stochastic y = g(x,p) + v
 % Outputs:      z = h(x,p)
 % ---------------------------------------------------------
 
@@ -278,7 +278,8 @@ end
 % Controlled output and measurement models
 %
 % z(t_k) = h(x(t_k),p)
-% y(t_k) = g(x(t_k),p) + v_k
+% y_det(t_k) = g(x_det(t_k),p) (noise-free)
+% y_stoch(t_k) = g(x_stoch(t_k),p) + v_k
 % ---------------------------------------------------------
 
 Zdet = zeros(N,2);
@@ -289,10 +290,8 @@ Ydet = zeros(N,2);
 Ypc  = zeros(N,2);
 Ysde = zeros(N,2);
 
-% Reproducible sensor noise
+% Reproducible sensor noise (stochastic models only)
 rng(200);
-
-Vdet = randn(N,2)*Lv';
 Vpc  = randn(N,2)*Lv';
 Vsde = randn(N,2)*Lv';
 
@@ -308,8 +307,10 @@ for k = 1:N
     Zpc(k,:)  = FourTankOutput(xpc,p)';
     Zsde(k,:) = FourTankOutput(xsde,p)';
 
-    % Sensor measurements with Gaussian noise
-    Ydet(k,:) = FourTankSensor(xdet,p)' + Vdet(k,:);
+    % Deterministic measurements: no sensor noise
+    Ydet(k,:) = FourTankSensor(xdet,p)';
+
+    % Stochastic measurements: Gaussian sensor noise
     Ypc(k,:)  = FourTankSensor(xpc,p)'  + Vpc(k,:);
     Ysde(k,:) = FourTankSensor(xsde,p)' + Vsde(k,:);
 
