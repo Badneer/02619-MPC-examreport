@@ -409,3 +409,10 @@ for s = 1:nNoise
 end
 
 fprintf('\nSimulation completed.\n');
+
+%% Save noisy normalized responses
+
+scriptFolder = fileparts(mfilename('fullpath'));
+
+save(fullfile(scriptFolder,'StepData42.mat'), ...
+    'T','tStep','stepSizes','YnormNoisy','noiseNames');

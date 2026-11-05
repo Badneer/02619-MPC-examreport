@@ -262,3 +262,9 @@ for k = 1:nSteps
 end
 
 fprintf('\nSimulation completed.\n');
+%% Save deterministic normalized responses
+
+scriptFolder = fileparts(mfilename('fullpath'));
+
+save(fullfile(scriptFolder,'StepData41.mat'), ...
+    'T','tStep','stepSizes','Ynorm');
