@@ -51,7 +51,7 @@ A = [A1;A2;A3;A4];
 % ---------------------------------------------------------
 
 t0 = 0;
-tf = 20*60;
+tf = 60*60;
 
 Ts = 4;    % Measurement sampling time [s]
 Td = 20;   % Disturbance update interval [s]
