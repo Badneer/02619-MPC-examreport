@@ -1,4 +1,4 @@
-%% Problem 6.3 - Kalman filtering with permanent disturbance steps
+ %% Problem 6.3 - Kalman filtering with permanent disturbance steps
 
 clear; clc; close all;
 
