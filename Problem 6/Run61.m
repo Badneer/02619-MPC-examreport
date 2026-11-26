@@ -35,49 +35,7 @@ assert(isfield(identified,'G'), ...
 assert(identified.G.Ts == 0 && isequal(size(identified.G),[2 2]), ...
     'Expected G to be a continuous-time 2-by-2 transfer function matrix.');
 
-%sysIdentified_d = c2d(ss(identified.G),Ts,'zoh');
-
-G = identified.G;
-
-% Obtain polynomial coefficients
-[num,den] = tfdata(G);
-
-% No transport delays were identified
-lambda = zeros(2,2);
-
-% Realization settings
-Ts = 4;
-Nmax = 100;
-tol = 1e-8;
-
-% Course toolbox: Hankel/SVD realization
-[Ad4,Bd4,Cd4,Dd4,sH] = ...
-    mimoctf2dss(num,den,lambda,Ts,Nmax,tol);
-
-sysIdentified_d = ss(Ad4,Bd4,Cd4,Dd4,Ts);
-
-% MATLAB reference
-sysReference = minreal(c2d(ss(G),Ts,'zoh'));
-
-% Compare model orders
-fprintf('Course model order: %d\n',size(Ad4,1));
-fprintf('MATLAB model order: %d\n',size(sysReference.A,1));
-
-% Hankel singular values
-figure;
-semilogy(sH,'o-');
-grid on;
-xlabel('Singular value index');
-ylabel('Hankel singular value');
-title('Problem 6.1 - Hankel singular values');
-
-% Verify input-output equivalence
-t = (0:Ts:1200)';
-yCourse = step(sysIdentified_d,t);
-yReference = step(sysReference,t);
-
-fprintf('Maximum step-response difference: %.3e\n', ...
-    max(abs(yCourse(:)-yReference(:))));
+sysIdentified_d = c2d(ss(identified.G),Ts,'zoh');
 
 %% Report the discrete-time models
 
